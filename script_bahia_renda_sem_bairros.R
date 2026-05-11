@@ -204,10 +204,9 @@ processar_municipio <- function(code_muni, name_muni) {
     popups <- sapply(1:nrow(setores_int), function(i) 
       criar_popup_renda_setor(setores_int[i, ]))
     
-    # Criar labels com renda formatada (sem decimais)
+    # Manter apenas popup (hover desativado)
     setores_int <- setores_int |>
       mutate(
-        renda_label = format(round(avg_inc_resp), big.mark = ".", decimal.mark = ","),
         popup_html = popups
       )
     
@@ -218,7 +217,6 @@ processar_municipio <- function(code_muni, name_muni) {
       layer.name = "Renda",
       alpha.regions = 0.8,
       popup = "popup_html",
-      label = "renda_label",
       col.regions = colorRampPalette(c("#440154", "#31688e", "#35b779", "#fde724"))(100)
     )
     
