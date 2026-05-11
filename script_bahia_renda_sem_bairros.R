@@ -18,22 +18,22 @@ municipios_maiores <- data.frame(
   name_muni = c(
     "Salvador",
     "Feira de Santana",
-    "Vitoria da Conquista",
+    "Vitória da Conquista",
     "Camaçari",
     "Juazeiro",
     "Itabuna",
     "Lauro de Freitas",
-    "Ilheus",
-    "Jequie",
+    "Ilhéus",
+    "Jequié",
     "Teixeira de Freitas",
     "Barreiras",
     "Alagoinhas",
     "Porto Seguro",
-    "Simoes Filho",
+    "Simões Filho",
     "Paulo Afonso",
-    "Eunapolis",
-    "Santo Antonio de Jesus",
-    "Luis Eduardo Magalhaes",
+    "Eunápolis",
+    "Santo Antônio de Jesus",
+    "Luís Eduardo Magalhães",
     "Valença",
     "Guanambi"
   ),
@@ -75,15 +75,66 @@ if (!dir.exists("docs/mapas/sem_bairros")) {
   dir.create("docs/mapas/sem_bairros")
 }
 
-# 4. Função para criar popup customizado
+# 4. Garantir cache local do parquet da Bahia (fallback ao piggyback)
+obter_caminho_cache_sc_ba <- function() {
+  if (.Platform$OS.type == "windows") {
+    base_cache <- file.path(Sys.getenv("LOCALAPPDATA"), "R", "cache", "R")
+  } else {
+    base_cache <- file.path(path.expand("~"), ".cache", "R")
+  }
+  file.path(base_cache, "cnefetools", "sc_assets", "sc_29.parquet")
+}
+
+garantir_parquet_bahia <- function(force = FALSE) {
+  destino <- obter_caminho_cache_sc_ba()
+  dir.create(dirname(destino), recursive = TRUE, showWarnings = FALSE)
+
+  arquivo_valido <- file.exists(destino) && file.info(destino)$size > 10 * 1024 * 1024
+  if (!force && arquivo_valido) {
+    cat("✓ Cache local sc_29.parquet já disponível\n")
+    return(TRUE)
+  }
+
+  if (file.exists(destino)) {
+    unlink(destino, force = TRUE)
+  }
+
+  url_sc_bahia <- "https://github.com/pedreirajr/cnefetools/releases/download/sc-assets-v2/sc_29.parquet"
+  cat("Baixando sc_29.parquet direto da release...\n")
+
+  baixou <- FALSE
+  try({
+    utils::download.file(url_sc_bahia, destino, mode = "wb", method = "libcurl", quiet = FALSE)
+    baixou <- TRUE
+  }, silent = TRUE)
+
+  if (!baixou && .Platform$OS.type == "windows") {
+    try({
+      utils::download.file(url_sc_bahia, destino, mode = "wb", method = "wininet", quiet = FALSE)
+      baixou <- TRUE
+    }, silent = TRUE)
+  }
+
+  arquivo_valido <- file.exists(destino) && file.info(destino)$size > 10 * 1024 * 1024
+  if (!arquivo_valido) {
+    cat("✗ Falha ao baixar sc_29.parquet para cache local\n")
+    return(FALSE)
+  }
+
+  cat(sprintf("✓ Cache sc_29.parquet pronto: %s\n", destino))
+  return(TRUE)
+}
+
+cat("Preparando cache local dos setores censitários da Bahia...\n")
+garantir_parquet_bahia(force = FALSE)
+
+# 5. Função para criar popup customizado
 criar_popup_renda_setor <- function(data) {
   popup_html <- sprintf(
-    "<b>Setor Censitário:</b> %s<br/>
-     <b>Renda Média (R$):</b> %s<br/>
+    "<b>Renda Média (R$):</b> %s<br/>
      <b>População:</b> %s pessoas<br/>
      <hr>
      <small>Município: %s</small>",
-    data$code_tract,
     format(round(data$avg_inc_resp), big.mark = ".", decimal.mark = ","),
     format(round(data$pop_ph), big.mark = ".", decimal.mark = ","),
     data$name_muni
@@ -91,7 +142,7 @@ criar_popup_renda_setor <- function(data) {
   return(popup_html)
 }
 
-# 5. Função para processar um município
+# 6. Função para processar um município
 processar_municipio <- function(code_muni, name_muni) {
   cat(sprintf("\n--- Processando: %s ---\n", name_muni))
   
@@ -104,11 +155,30 @@ processar_municipio <- function(code_muni, name_muni) {
     
     # Interpolar dados de renda média e população
     cat("  Interpolando dados...\n")
-    setores_int <- tracts_to_polygon(
-      code_muni = code_muni,
-      polygon = setores,
-      vars = c('pop_ph', 'avg_inc_resp'),
-      verbose = FALSE
+    setores_int <- tryCatch(
+      {
+        tracts_to_polygon(
+          code_muni = code_muni,
+          polygon = setores,
+          vars = c('pop_ph', 'avg_inc_resp'),
+          verbose = FALSE
+        )
+      },
+      error = function(e) {
+        if (grepl("Failed to download sc_29\\.parquet", e$message, ignore.case = TRUE)) {
+          cat("  ⚠️ Falha no download via cnefetools. Tentando fallback de cache e nova tentativa...\n")
+          ok_cache <- garantir_parquet_bahia(force = TRUE)
+          if (ok_cache) {
+            return(tracts_to_polygon(
+              code_muni = code_muni,
+              polygon = setores,
+              vars = c('pop_ph', 'avg_inc_resp'),
+              verbose = FALSE
+            ))
+          }
+        }
+        stop(e)
+      }
     )
     
     # Filtrar setores com dados válidos
@@ -134,27 +204,21 @@ processar_municipio <- function(code_muni, name_muni) {
     popups <- sapply(1:nrow(setores_int), function(i) 
       criar_popup_renda_setor(setores_int[i, ]))
     
-    # Criar labels com classificação de renda
+    # Criar labels com renda formatada (sem decimais)
     setores_int <- setores_int |>
       mutate(
-        classe_renda = case_when(
-          avg_inc_resp < 1000 ~ "Muito Baixa (< R$ 1.000)",
-          avg_inc_resp < 2000 ~ "Baixa (R$ 1.000-2.000)",
-          avg_inc_resp < 3000 ~ "Média-Baixa (R$ 2.000-3.000)",
-          avg_inc_resp < 5000 ~ "Média (R$ 3.000-5.000)",
-          avg_inc_resp < 10000 ~ "Média-Alta (R$ 5.000-10.000)",
-          TRUE ~ "Alta (> R$ 10.000)"
-        )
+        renda_label = format(round(avg_inc_resp), big.mark = ".", decimal.mark = ","),
+        popup_html = popups
       )
     
     # Criar mapa interativo
     mapa_renda <- mapview(
       setores_int, 
       zcol = 'renda_inteira',
-      layer.name = paste("Renda Média (R$) -", name_muni),
+      layer.name = "Renda",
       alpha.regions = 0.8,
-      popup = popups,
-      label = setores_int$classe_renda,
+      popup = "popup_html",
+      label = "renda_label",
       col.regions = colorRampPalette(c("#440154", "#31688e", "#35b779", "#fde724"))(100)
     )
     
@@ -164,12 +228,19 @@ processar_municipio <- function(code_muni, name_muni) {
     nome_arquivo <- gsub("[^A-Za-z0-9]", "_", nome_arquivo)
     nome_arquivo <- tolower(nome_arquivo)
     caminho_arquivo <- sprintf("docs/mapas/sem_bairros/%s.html", nome_arquivo)
+    lib_dir <- sprintf("%s_lib", nome_arquivo)
+    titulo_html <- sprintf("Renda por Setor Censitario - %s", iconv(name_muni, to = "ASCII//TRANSLIT"))
+
+    if (dir.exists(file.path("docs/mapas/sem_bairros", lib_dir))) {
+      unlink(file.path("docs/mapas/sem_bairros", lib_dir), recursive = TRUE, force = TRUE)
+    }
     
     htmlwidgets::saveWidget(
-      mapa_renda@map, 
-      file = caminho_arquivo, 
+      mapa_renda@map,
+      file = caminho_arquivo,
       selfcontained = FALSE,
-      title = paste("Renda por Setor -", name_muni)
+      libdir = lib_dir,
+      title = titulo_html
     )
     
     cat(sprintf("  ✓ Mapa salvo: %s\n", caminho_arquivo))
@@ -181,7 +252,7 @@ processar_municipio <- function(code_muni, name_muni) {
   })
 }
 
-# 6. Processar todos os municípios
+# 7. Processar todos os municípios
 cat("\n=======================================================\n")
 cat("INICIANDO PROCESSAMENTO DOS MUNICÍPIOS\n")
 cat("=======================================================\n")
@@ -205,7 +276,7 @@ for (i in 1:nrow(municipios_maiores)) {
   ))
 }
 
-# 7. Relatório final
+# 8. Relatório final
 cat("\n=======================================================\n")
 cat("RELATÓRIO FINAL\n")
 cat("=======================================================\n\n")

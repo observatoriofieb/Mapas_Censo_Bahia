@@ -1,0 +1,36 @@
+Loading required namespace: sf
+
+Attaching package: 'dplyr'
+
+The following objects are masked from 'package:stats':
+
+    filter, lag
+
+The following objects are masked from 'package:base':
+
+    intersect, setdiff, setequal, union
+
+Using year/date 2022
+Download status: 0 done; 1 in progress (0 b/s). Total size: 6.89 Kb (??%)...Download status: 0 done; 1 in progress (4.06 Mb/s). Total size: 39.98 Mb (??%)...Download status: 1 done; 0 in progress. Total size: 52.20 Mb (187%)... done!             
+Error in `stopifnot()`:
+ℹ In argument: `abbrev_state == "BA"`.
+Caused by error:
+! object 'abbrev_state' not found
+Backtrace:
+     ▆
+  1. ├─dplyr::filter(...)
+  2. ├─sf:::filter.sf(...)
+  3. │ └─sf:::.re_sf(...)
+  4. │   └─base::stopifnot(...)
+  5. ├─base::NextMethod()
+  6. ├─dplyr:::filter.data.frame(...)
+  7. │ └─dplyr:::filter_impl(...)
+  8. │   └─dplyr:::filter_rows(...)
+  9. │     └─dplyr:::filter_eval(...)
+ 10. │       ├─base::withCallingHandlers(...)
+ 11. │       └─mask$eval_all_filter(dots_expanded, invert, env_filter)
+ 12. │         └─dplyr (local) eval()
+ 13. └─base::.handleSimpleError(...)
+ 14.   └─dplyr (local) h(simpleError(msg, call))
+ 15.     └─rlang::abort(message, class = error_class, parent = parent, call = error_call)
+Execution halted

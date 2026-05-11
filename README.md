@@ -4,7 +4,7 @@ Projeto de visualização interativa da distribuição de renda média nos munic
 
 ## 🗺️ Visualize os Mapas
 
-🌐 **Acesse online:** [https://jorgel-mendes.github.io/Mapas_Censo_Bahia/](https://jorgel-mendes.github.io/Mapas_Censo_Bahia/)
+🌐 **Acesse online:** [https://observatoriofieb.github.io/Mapas_Censo_Bahia/](https://observatoriofieb.github.io/Mapas_Censo_Bahia/)
 
 ## 📋 Sobre o Projeto
 
@@ -206,7 +206,7 @@ MIT License - Sinta-se livre para usar e modificar para seus próprios projetos.
 
 ## 👥 Créditos
 
-- **Projeto base:** [Mapas_Salvador_Cnefetools](https://github.com/jorgel-mendes/Mapas_Salvador_Cnefetools)
+- **Projeto base:** [Mapas_Salvador_Cnefetools](https://github.com/observatoriofieb/Mapas_Salvador_Cnefetools)
 - **Desenvolvido por:** Observatório FIEB
 - **Pacote cnefetools:** [https://github.com/ipeaGIT/cnefetools](https://github.com/ipeaGIT/cnefetools)
 
@@ -221,7 +221,7 @@ Contribuições são bem-vindas! Sinta-se à vontade para:
 
 ## 📧 Contato
 
-Para dúvidas ou sugestões, abra uma [issue](https://github.com/jorgel-mendes/Mapas_Censo_Bahia/issues) no GitHub.
+Para dúvidas ou sugestões, abra uma [issue](https://github.com/observatoriofieb/Mapas_Censo_Bahia/issues) no GitHub.
 
 ---
 
