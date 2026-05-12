@@ -209,13 +209,20 @@ processar_municipio <- function(code_muni, name_muni) {
         Municipio = name_muni
       )
     
+    # Gerar popup em HTML com os campos desejados (clique)
+    popup_vals <- leafpop::popupTable(
+      as.data.frame(sf::st_drop_geometry(setores_int[, c("Renda", "Populacao", "Municipio")])),
+      row.numbers = FALSE,
+      feature.id = FALSE
+    )
+
     # Criar mapa interativo
     mapa_renda <- mapview(
       setores_int, 
       zcol = 'renda_inteira',
       layer.name = "Renda",
       alpha.regions = 0.8,
-      popup = c("Renda", "Populacao", "Municipio"),
+      popup = popup_vals,
       label = "renda_label",
       col.regions = colorRampPalette(c("#440154", "#31688e", "#35b779", "#fde724"))(100)
     )
