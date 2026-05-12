@@ -200,14 +200,13 @@ processar_municipio <- function(code_muni, name_muni) {
     cat(sprintf("  Renda mínima: R$ %.2f\n", min(setores_int$avg_inc_resp, na.rm = TRUE)))
     cat(sprintf("  Renda máxima: R$ %.2f\n", max(setores_int$avg_inc_resp, na.rm = TRUE)))
     
-    # Criar popups
-    popups <- sapply(1:nrow(setores_int), function(i) 
-      criar_popup_renda_setor(setores_int[i, ]))
-    
-    # Manter apenas popup (hover desativado)
+    # Criar labels simples com renda formatada (para hover)
     setores_int <- setores_int |>
       mutate(
-        popup_html = popups
+        renda_label = sprintf("Renda: R$ %s", format(round(avg_inc_resp), big.mark = ".", decimal.mark = ",")),
+        Renda = sprintf("R$ %s", format(round(avg_inc_resp), big.mark = ".", decimal.mark = ",")),
+        Populacao = format(round(pop_ph), big.mark = ".", decimal.mark = ","),
+        Municipio = name_muni
       )
     
     # Criar mapa interativo
@@ -216,7 +215,8 @@ processar_municipio <- function(code_muni, name_muni) {
       zcol = 'renda_inteira',
       layer.name = "Renda",
       alpha.regions = 0.8,
-      popup = "popup_html",
+      popup = c("Renda", "Populacao", "Municipio"),
+      label = "renda_label",
       col.regions = colorRampPalette(c("#440154", "#31688e", "#35b779", "#fde724"))(100)
     )
     
