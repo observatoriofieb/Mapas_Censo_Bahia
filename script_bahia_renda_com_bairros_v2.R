@@ -139,8 +139,14 @@ for (muni_info in municipios_lista) {
     )
     
     # Salvar
-    nome_arquivo <- iconv(name, to="ASCII//TRANSLIT")
+    nome_arquivo <- chartr(
+      "áàãâäéèêëíìîïóòõôöúùûüçÁÀÃÂÄÉÈÊËÍÌÎÏÓÒÕÔÖÚÙÛÜÇ",
+      "aaaaaaeeeeiiiiooooouuuucAAAAAAAAEEEEIIIIOOOOOUUUUC",
+      name
+    )
     nome_arquivo <- gsub("[^A-Za-z0-9]", "_", nome_arquivo)
+    nome_arquivo <- gsub("_+", "_", nome_arquivo)
+    nome_arquivo <- gsub("^_|_$", "", nome_arquivo)
     nome_arquivo <- tolower(nome_arquivo)
     caminho_arquivo <- sprintf("docs/mapas/com_bairros/%s.html", nome_arquivo)
     

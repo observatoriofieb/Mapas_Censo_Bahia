@@ -112,8 +112,14 @@ processar_municipio <- function(code_muni, name_muni) {
     
     # Salvar mapa como HTML
     # Criar nome de arquivo seguro (sem espaços ou caracteres especiais)
-    nome_arquivo <- iconv(name_muni, to="ASCII//TRANSLIT")
+    nome_arquivo <- chartr(
+      "áàãâäéèêëíìîïóòõôöúùûüçÁÀÃÂÄÉÈÊËÍÌÎÏÓÒÕÔÖÚÙÛÜÇ",
+      "aaaaaaeeeeiiiiooooouuuucAAAAAAAAEEEEIIIIOOOOOUUUUC",
+      name_muni
+    )
     nome_arquivo <- gsub("[^A-Za-z0-9]", "_", nome_arquivo)
+    nome_arquivo <- gsub("_+", "_", nome_arquivo)
+    nome_arquivo <- gsub("^_|_$", "", nome_arquivo)
     nome_arquivo <- tolower(nome_arquivo)
     caminho_arquivo <- sprintf("docs/mapas/com_bairros/%s.html", nome_arquivo)
     
