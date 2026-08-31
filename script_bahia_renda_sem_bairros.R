@@ -9,6 +9,19 @@ library(mapview)
 library(leafpop)
 library(htmlwidgets)
 
+# Mapas-base sem necessidade de chave de API.
+# Os tiles da CARTO (CartoDB.Positron/DarkMatter, padrao do mapview) passaram a
+# exigir API key e vem marcados com "API KEY REQUIRED" sobre o mapa.
+mapviewOptions(
+  basemaps = c(
+    "Esri.WorldGrayCanvas",
+    "Esri.WorldStreetMap",
+    "OpenStreetMap",
+    "Esri.WorldImagery",
+    "OpenTopoMap"
+  )
+)
+
 cat("=======================================================\n")
 cat("MAPAS DE RENDA - 20 MAIORES MUNICÍPIOS DA BAHIA\n")
 cat("=======================================================\n\n")
