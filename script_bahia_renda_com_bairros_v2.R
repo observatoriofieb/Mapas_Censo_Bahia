@@ -140,15 +140,27 @@ for (muni_info in municipios_lista) {
     popups <- sapply(1:nrow(bairros_int), function(i) 
       criar_popup_renda_bairro(bairros_int[i, ]))
     
+    # Escala de cores em quantis, calculada para cada municipio.
+    # Numa rampa linear do minimo ao maximo, uns poucos bairros de renda alta
+    # esticam a escala e jogam todo o resto na mesma cor escura.
+    quebras <- unique(round(as.numeric(
+      quantile(bairros_int$renda_inteira, probs = seq(0, 1, length.out = 9), na.rm = TRUE)
+    )))
+    if (length(quebras) < 3) {
+      quebras <- unique(round(seq(min(bairros_int$renda_inteira),
+                                  max(bairros_int$renda_inteira), length.out = 4)))
+    }
+
     # Criar mapa
     mapa_renda <- mapview(
-      bairros_int, 
+      bairros_int,
       zcol = 'renda_inteira',
       layer.name = paste("Renda Média (R$) -", name),
       alpha.regions = 0.8,
       popup = popups,
       label = bairros_int$name_neighborhood,
-      col.regions = colorRampPalette(c("#440154", "#31688e", "#35b779", "#fde724"))(100)
+      col.regions = colorRampPalette(c("#440154", "#31688e", "#35b779", "#fde724"))(length(quebras) - 1),
+      at = quebras
     )
     
     # Salvar

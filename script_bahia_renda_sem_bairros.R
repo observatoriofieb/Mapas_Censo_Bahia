@@ -229,15 +229,29 @@ processar_municipio <- function(code_muni, name_muni) {
       feature.id = FALSE
     )
 
+    # Escala de cores em quantis, calculada para cada municipio.
+    # A renda por setor e muito assimetrica: numa rampa linear do minimo ao
+    # maximo, meia duzia de setores ricos estica a escala e a cidade inteira
+    # sai na mesma cor escura. Com quantis cada classe tem o mesmo numero de
+    # setores e o contraste interno do municipio aparece.
+    quebras <- unique(round(as.numeric(
+      quantile(setores_int$renda_inteira, probs = seq(0, 1, length.out = 9), na.rm = TRUE)
+    )))
+    if (length(quebras) < 3) {
+      quebras <- unique(round(seq(min(setores_int$renda_inteira),
+                                  max(setores_int$renda_inteira), length.out = 4)))
+    }
+
     # Criar mapa interativo
     mapa_renda <- mapview(
-      setores_int, 
+      setores_int,
       zcol = 'renda_inteira',
       layer.name = "Renda",
       alpha.regions = 0.8,
       popup = popup_vals,
       label = "renda_label",
-      col.regions = colorRampPalette(c("#440154", "#31688e", "#35b779", "#fde724"))(100)
+      col.regions = colorRampPalette(c("#440154", "#31688e", "#35b779", "#fde724"))(length(quebras) - 1),
+      at = quebras
     )
     
     # Salvar mapa como HTML
