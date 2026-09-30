@@ -9,9 +9,14 @@ library(mapview)
 library(leafpop)
 library(htmlwidgets)
 
-# Mapas-base sem necessidade de chave de API.
-# Os tiles da CARTO (CartoDB.Positron/DarkMatter, padrao do mapview) passaram a
-# exigir API key e vem marcados com "API KEY REQUIRED" sobre o mapa.
+# Regra de faixas de renda compartilhada entre os scripts
+source("faixas_renda.R")
+
+# Mapas-base sem necessidade de chave de API. Os tiles da CARTO (padrao do
+# mapview) passaram a exigir API key e vinham marcados com "API KEY REQUIRED".
+# O primeiro da lista e o que abre por padrao. Nos mapas por bairro fica o
+# fundo cinza claro: as areas sao grandes e o traçado de ruas do OSM so
+# poluiria (nos mapas por setor censitario o padrao e o OpenStreetMap).
 mapviewOptions(
   basemaps = c(
     "Esri.WorldGrayCanvas",
@@ -113,27 +118,22 @@ processar_municipio <- function(code_muni, name_muni) {
       criar_popup_renda_bairro(bairros_int[i, ]))
     
     # Criar mapa interativo
-    # Escala de cores em quantis, calculada para cada municipio.
-    # Numa rampa linear do minimo ao maximo, uns poucos bairros de renda alta
-    # esticam a escala e jogam todo o resto na mesma cor escura.
-    quebras <- unique(round(as.numeric(
-      quantile(bairros_int$renda_inteira, probs = seq(0, 1, length.out = 9), na.rm = TRUE)
-    )))
-    if (length(quebras) < 3) {
-      quebras <- unique(round(seq(min(bairros_int$renda_inteira),
-                                  max(bairros_int$renda_inteira), length.out = 4)))
-    }
+    # Faixas de cor calculadas para cada municipio (ver faixas_renda.R)
+    quebras <- quebras_renda(bairros_int$renda_inteira)
 
     mapa_renda <- mapview(
       bairros_int,
       zcol = 'renda_inteira',
       layer.name = paste("Renda Média (R$) -", name_muni),
-      alpha.regions = 0.8,
+      alpha.regions = 0.55,
       popup = popups,
       label = bairros_int$name_neighborhood,
       col.regions = colorRampPalette(c("#440154", "#31688e", "#35b779", "#fde724"))(length(quebras) - 1),
       at = quebras
     )
+
+    # rotulos em pt-BR e ultima faixa aberta ("acima de X")
+    mapa_renda <- aplicar_rotulos(mapa_renda, quebras)
     
     # Salvar mapa como HTML
     # Criar nome de arquivo seguro (sem espaços ou caracteres especiais)

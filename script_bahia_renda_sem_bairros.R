@@ -9,14 +9,19 @@ library(mapview)
 library(leafpop)
 library(htmlwidgets)
 
-# Mapas-base sem necessidade de chave de API.
-# Os tiles da CARTO (CartoDB.Positron/DarkMatter, padrao do mapview) passaram a
-# exigir API key e vem marcados com "API KEY REQUIRED" sobre o mapa.
+# Regra de faixas de renda compartilhada entre os scripts
+source("faixas_renda.R")
+
+# Mapas-base sem necessidade de chave de API. Os tiles da CARTO (padrao do
+# mapview) passaram a exigir API key e vinham marcados com "API KEY REQUIRED".
+# O primeiro da lista e o que abre por padrao: o OpenStreetMap nomeia as ruas,
+# o que ajuda a localizar o setor no terreno (com alpha.regions em 0,55 os
+# nomes continuam legiveis por baixo das cores).
 mapviewOptions(
   basemaps = c(
+    "OpenStreetMap",
     "Esri.WorldGrayCanvas",
     "Esri.WorldStreetMap",
-    "OpenStreetMap",
     "Esri.WorldImagery",
     "OpenTopoMap"
   )
@@ -229,30 +234,23 @@ processar_municipio <- function(code_muni, name_muni) {
       feature.id = FALSE
     )
 
-    # Escala de cores em quantis, calculada para cada municipio.
-    # A renda por setor e muito assimetrica: numa rampa linear do minimo ao
-    # maximo, meia duzia de setores ricos estica a escala e a cidade inteira
-    # sai na mesma cor escura. Com quantis cada classe tem o mesmo numero de
-    # setores e o contraste interno do municipio aparece.
-    quebras <- unique(round(as.numeric(
-      quantile(setores_int$renda_inteira, probs = seq(0, 1, length.out = 9), na.rm = TRUE)
-    )))
-    if (length(quebras) < 3) {
-      quebras <- unique(round(seq(min(setores_int$renda_inteira),
-                                  max(setores_int$renda_inteira), length.out = 4)))
-    }
+    # Faixas de cor calculadas para cada municipio (ver faixas_renda.R)
+    quebras <- quebras_renda(setores_int$renda_inteira)
 
     # Criar mapa interativo
     mapa_renda <- mapview(
       setores_int,
       zcol = 'renda_inteira',
       layer.name = "Renda",
-      alpha.regions = 0.8,
+      alpha.regions = 0.55,
       popup = popup_vals,
       label = "renda_label",
       col.regions = colorRampPalette(c("#440154", "#31688e", "#35b779", "#fde724"))(length(quebras) - 1),
       at = quebras
     )
+
+    # rotulos em pt-BR e ultima faixa aberta ("acima de X")
+    mapa_renda <- aplicar_rotulos(mapa_renda, quebras)
     
     # Salvar mapa como HTML
     # Criar nome de arquivo seguro (sem espaços ou caracteres especiais)

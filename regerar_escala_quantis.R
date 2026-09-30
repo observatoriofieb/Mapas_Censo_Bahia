@@ -26,20 +26,25 @@ suppressMessages({
   library(jsonlite)
 })
 
+source("faixas_renda.R")
+
 # fgb = TRUE mantem a mesma arquitetura dos mapas originais: a geometria vai
 # para um arquivo .fgb ao lado do HTML, em vez de embutida como addPolygons.
 mapviewOptions(fgb = TRUE)
 
-# Mapas-base sem necessidade de chave de API (ver script_bahia_renda_*.R)
-mapviewOptions(
-  basemaps = c(
-    "Esri.WorldGrayCanvas",
-    "Esri.WorldStreetMap",
-    "OpenStreetMap",
-    "Esri.WorldImagery",
-    "OpenTopoMap"
-  )
-)
+# Mapas-base sem chave de API; o primeiro da lista e o que abre por padrao.
+# Nos mapas por setor censitario o padrao e o OpenStreetMap: os setores sao
+# pequenos e os nomes de rua ajudam a localizar cada um no terreno. Nos mapas
+# por bairro fica o fundo cinza claro, que nao compete com as areas grandes.
+basemaps_do_grupo <- function(grupo) {
+  if (identical(grupo, "com_bairros")) {
+    c("Esri.WorldGrayCanvas", "Esri.WorldStreetMap", "OpenStreetMap",
+      "Esri.WorldImagery", "OpenTopoMap")
+  } else {
+    c("OpenStreetMap", "Esri.WorldGrayCanvas", "Esri.WorldStreetMap",
+      "Esri.WorldImagery", "OpenTopoMap")
+  }
+}
 
 # A paleta precisa ter exatamente uma cor por classe: com uma rampa de 100 cores
 # e 8 quebras o mapview usa so o comeco da rampa em alguns mapas (Feira de
@@ -64,17 +69,8 @@ extrair_entre <- function(txt, marca_ini, marca_fim) {
   substring(resto, 1, fim - 1)
 }
 
-# Quebras por quantis. Empates sao colapsados; se sobrar classe de menos,
-# cai para uma escala linear simples para nao quebrar o mapa.
-quebras_quantis <- function(v, n = N_CLASSES) {
-  v <- v[is.finite(v)]
-  b <- unique(round(as.numeric(quantile(v, probs = seq(0, 1, length.out = n + 1)))))
-  if (length(b) < 3) {
-    if (diff(range(v)) == 0) return(c(v[1] - 1, v[1] + 1))
-    b <- unique(round(seq(min(v), max(v), length.out = 4)))
-  }
-  b
-}
+# A regra de faixas vive em faixas_renda.R, compartilhada com os scripts de
+# geracao: quantis arredondados e ultima faixa aberta no p95.
 
 processar_mapa <- function(caminho_html, dir_saida = NULL) {
   nome <- basename(caminho_html)
@@ -143,23 +139,28 @@ processar_mapa <- function(caminho_html, dir_saida = NULL) {
   }
   if (length(rotulos) > 1 && length(rotulos) != nrow(x)) rotulos <- rotulos[1]
 
-  brk <- quebras_quantis(x$renda_inteira)
-  cat(sprintf("  %d feicoes | renda %s a %s | %d classes\n",
+  mapviewOptions(basemaps = basemaps_do_grupo(basename(pasta)))
+
+  brk <- quebras_renda(x$renda_inteira)
+  faixas <- rotulos_faixas(brk)
+  cat(sprintf("  %d feicoes | renda %s a %s | %d faixas | ultima: %s\n",
               nrow(x),
-              format(min(x$renda_inteira), big.mark = ".", decimal.mark = ","),
-              format(max(x$renda_inteira), big.mark = ".", decimal.mark = ","),
-              length(brk) - 1))
+              formatar_reais(min(x$renda_inteira)),
+              formatar_reais(max(x$renda_inteira)),
+              length(brk) - 1,
+              faixas[length(faixas)]))
 
   mapa <- mapview(
     x,
     zcol = "renda_inteira",
     layer.name = nome_camada,
-    alpha.regions = 0.8,
+    alpha.regions = 0.55,
     popup = popups,
     label = rotulos,
     col.regions = RAMPA(length(brk) - 1),
     at = brk
   )
+  mapa <- aplicar_rotulos(mapa, brk)
 
   # saveWidget resolve libdir em relacao ao arquivo: trabalhar dentro da pasta
   wd <- getwd()
